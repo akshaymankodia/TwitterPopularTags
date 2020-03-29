@@ -1,8 +1,7 @@
-import org.apache.spark.streaming.Seconds
-import org.apache.spark.streaming.StreamingContext
+import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext._
 import org.apache.spark.streaming.twitter._
-import org.apache.spark.SparkConf
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 /**
  * Calculates popular hashtags (topics) over sliding 10 and 60 second windows from a Twitter
@@ -38,7 +37,7 @@ object TwitterPopularTags {
     val ssc = new StreamingContext(sparkConf, Seconds(2))
     val stream = TwitterUtils.createStream(ssc, None, filters)//Dstream
 
-    val hashTags = stream.flatMap(status => status.getText.split(" ").filter(_.startsWith("#")))
+    val hashTags = stream.flatMap(status => status.getText.split(" ").filter(_.startsWith("#COVID19")))
 
     val topCounts60 = hashTags.map((_, 1)).reduceByKeyAndWindow(_ + _, Seconds(60))
       .map{case (topic, count) => (count, topic)}
@@ -51,13 +50,13 @@ object TwitterPopularTags {
 
     // Print popular hashtags
     topCounts60.foreachRDD(rdd => {
-      val topList = rdd.take(10)
+      val topList = rdd.collect()
       println("\nPopular topics in last 60 seconds (%s total):".format(rdd.count()))
       topList.foreach{case (count, tag) => println("%s (%s tweets)".format(tag, count))}
     })
 
     topCounts10.foreachRDD(rdd => {
-      val topList = rdd.take(10)
+      val topList = rdd.collect()
       println("\nPopular topics in last 10 seconds (%s total):".format(rdd.count()))
       topList.foreach{case (count, tag) => println("%s (%s tweets)".format(tag, count))}
     })
